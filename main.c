@@ -6,17 +6,7 @@
 #include "poker.h"
 
 
-#define SPADE_B   (wint_t)9824
-#define HEART_B   (wint_t)9829
-#define DIAMOND_B (wint_t)9830
-#define CLUB_B    (wint_t)9827
-
-#define SPADE_W   (wint_t)9828
-#define HEART_W   (wint_t)9825
-#define DIAMOND_W (wint_t)9826
-#define CLUB_W    (wint_t)9831
-
-/******************************************************************************
+/*******************************************************************
 Function : rankHand
 Process  : Ranks the hand to determine its type (ie Straight)
 Build hand repetition list (singles, pairs, trips, quads)
@@ -45,11 +35,25 @@ Notes    : None
 https://github.com/donnemartin/poker/blob/master/src/HandRanker.cpp
 */
 
+#define SPADE_B   (wint_t)9824
+#define HEART_B   (wint_t)9829
+#define DIAMOND_B (wint_t)9830
+#define CLUB_B    (wint_t)9827
+
+#define SPADE_W   (wint_t)9828
+#define HEART_W   (wint_t)9825
+#define DIAMOND_W (wint_t)9826
+#define CLUB_W    (wint_t)9831
+
 int deck_top = 51; // deck[deck_top] is the top card of the deck
-community_cards com_cards;
-int sb = 1;
-int bb = 2;
-int init_stack = 100;
+community_cards com_cards; // the community cards
+int sb = 1; // small blind amount (in units of chips)
+int bb = 2; // big blind amount
+int button_player; // which player is button
+int sb_player; // which player is sb
+int bb_player; // which player is bb
+int init_stack = 100; // initial stack (chips) of each player
+int pot = 0; // how many chips are in the pot currently
 
 
 int main(int argc, char const *argv[]) {
@@ -57,88 +61,75 @@ int main(int argc, char const *argv[]) {
   setlocale(LC_ALL, "");
   int i;
 
-  int num_of_players = 2;
+  int num_of_players = 4;
   player players[num_of_players];
   initialize_players(players, num_of_players);
 
   card deck[deck_top+1];
   initialize_deck(deck);
 
-  int pot, cur_bet;
   int player_turn = 0;
+  int betting = 0;
 
-  while (players[0].chips > 0 && players[1].chips) {
+  while (players_still_playing(players, num_of_players) >= 2) {
     com_cards.num_of_cards = 0;
     for (i = 0; i < num_of_players; i++) {
       printf("p%d : chips %d\n", i+1, players[i].chips);
-    }
+    } // for
     shuffle_deck(deck);
     give_cards(players, num_of_players, deck);
     getchar();
 
-    printf("\e[1;1H\e[2J"); // clear screen
-    printf("p1: ");
-    print_player_hand(players[0]); // show player1 cards
-    getchar();
-
-    printf("\e[1;1H\e[2J"); // clear screen
-    printf("p2: ");
-    print_player_hand(players[1]); // show player2 cards
-    getchar();
-
-    printf("\e[1;1H\e[2J"); // clear screen
-
-
-
-// BETTING START
-/*
-    cur_bet = 0;
-    pot = 0;
-    int j;
     for (i = 0; i < num_of_players; i++) {
-      j = (i + player_turn) % num_of_players;
-      if (bet != 0) {
-        printf("Bet is %d.\n", bet);
-      }
-      printf("Player%d: Place bet: ", j+1);
-      scanf("%d", &(players[j].bet));
-      if (bet == 0) {
-        if (players[j].bet == 0) {
-          printf("Check.\n");
-          continue;
-        } // playerbet == 0
-        else {
-          if (players[j].bet > players[j].chips) {
-            printf("You have only %d chips! You must bet less!\n", );
-            i--;
-            continue;
-          } // playerbet > playerchips
-          else {
-            bet = players[j].bet;
-            players[j].chips -= bet;
-          }
-        } // playerbet > 0
-      } // bet == 0
-      else {
-        if (players[j].bet == 0) {
-          printf("Fold!\n");
+      if (is_player_still_playing(players[i])) {
+        clear_screen();
+        printf("p%d: ", i+1);
+        print_player_hand(players[i]);
+        getchar();
+      } // if
+    } // for
 
-        }
-        else if (players[j].bet < bet) {
-          printf("You must bet at lease %d!\n", bet);
 
-        }
-      } // bet > 0
-      // increase the pot
 
-    }
-    player_turn = (j + 1) % num_of_players;
-*/
-// BETTING END
+
+
+
+
+
+
+
+
+
+
+
+    clear_screen();
+    // BETTING PHASE
+    print_button_sb_bb_players(player_turn, players, num_of_players);
+    players[sb_player].chips -= sb;
+    players[sb_player].chips += sb;
+    players[bb_player].chips -= bb;
+    players[bb_player].chips += bb;
+    pot += sb + bb;
 
     getchar();
 
-    printf("\e[1;1H\e[2J"); // clear screen
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    clear_screen();
     flop_cards(deck);
     print_community_cards(); // show flop
     getchar();
@@ -154,12 +145,13 @@ int main(int argc, char const *argv[]) {
     for (i = 0; i < num_of_players; i++) { // show each player's cards
       printf("p%d: ", i+1);
       print_player_hand(players[i]);
-    }
+    } // for
     getchar();
 
     deck_top = 51;
-    printf("\e[1;1H\e[2J"); // clear screen
-  }
+    player_turn = next_avail_player(player_turn, players, num_of_players);
+    clear_screen();
+  } // while
 
   return 0;
 }
